@@ -4,7 +4,7 @@ transcript on
 onerror {resume}
 
 # --- 参数 ---
-set TB_DIR .
+set TB_DIR ../tb
 set SRC_DIR_GAME ../../../src/game
 set TOP_TB tb_snake_engine
 set LIB_NAME work

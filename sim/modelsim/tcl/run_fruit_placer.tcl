@@ -4,7 +4,7 @@ onerror {resume}   ;# 出错不退出，方便看完整错误
 
 # 参数
 set TB_DIR ../tb
-set SRC_DIR_GAME ../../src/game
+set SRC_DIR_GAME ../../../src/game
 set TOP_TB tb_fruit_placer
 set LIB_NAME work
 

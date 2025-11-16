@@ -5,7 +5,7 @@ onerror {resume}
 
 # --- 参数 ---
 set TB_DIR ../tb
-set SRC_DIR_INPUT ../../src/input
+set SRC_DIR_INPUT ../../../src/input
 set TOP_TB tb_keyboard_input
 set LIB_NAME work
 

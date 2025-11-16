@@ -10,7 +10,7 @@ onerror {quit -code 1}        ;# 任意出错即退出，CI/自动化更稳
 
 # ---- 可按需修改的参数 ----
 set TB_DIR ../tb
-set SRC_DIR_GAME ../../src/game
+set SRC_DIR_GAME ../../../src/game
 set TOP_TB tb_snake_head
 set LIB_NAME work
 

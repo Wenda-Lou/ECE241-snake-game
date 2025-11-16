@@ -1,5 +1,5 @@
 Fitter report for top_snake_game_core
-Sun Nov 16 03:52:39 2025
+Sun Nov 16 18:37:38 2025
 Quartus Prime Version 24.1std.0 Build 1077 03/04/2025 SC Lite Edition
 
 
@@ -70,7 +70,7 @@ on the Quartus Prime software download page.
 +-----------------------------------------------------------------------------------+
 ; Fitter Summary                                                                    ;
 +---------------------------------+-------------------------------------------------+
-; Fitter Status                   ; Successful - Sun Nov 16 03:52:39 2025           ;
+; Fitter Status                   ; Successful - Sun Nov 16 18:37:38 2025           ;
 ; Quartus Prime Version           ; 24.1std.0 Build 1077 03/04/2025 SC Lite Edition ;
 ; Revision Name                   ; top_snake_game_core                             ;
 ; Top-level Entity Name           ; game                                            ;
@@ -160,26 +160,26 @@ on the Quartus Prime software download page.
 ; Number detected on machine ; 24          ;
 ; Maximum allowed            ; 16          ;
 ;                            ;             ;
-; Average used               ; 1.13        ;
+; Average used               ; 1.14        ;
 ; Maximum used               ; 16          ;
 ;                            ;             ;
 ; Usage by Processor         ; % Time Used ;
 ;     Processor 1            ; 100.0%      ;
-;     Processor 2            ;   1.1%      ;
-;     Processor 3            ;   1.0%      ;
-;     Processor 4            ;   0.9%      ;
-;     Processor 5            ;   0.9%      ;
+;     Processor 2            ;   1.2%      ;
+;     Processor 3            ;   1.1%      ;
+;     Processor 4            ;   1.0%      ;
+;     Processor 5            ;   1.0%      ;
 ;     Processor 6            ;   0.9%      ;
-;     Processor 7            ;   0.8%      ;
-;     Processor 8            ;   0.8%      ;
-;     Processor 9            ;   0.8%      ;
-;     Processor 10           ;   0.8%      ;
-;     Processor 11           ;   0.8%      ;
-;     Processor 12           ;   0.8%      ;
-;     Processor 13           ;   0.8%      ;
-;     Processor 14           ;   0.8%      ;
-;     Processor 15           ;   0.8%      ;
-;     Processor 16           ;   0.8%      ;
+;     Processor 7            ;   0.9%      ;
+;     Processor 8            ;   0.9%      ;
+;     Processor 9            ;   0.9%      ;
+;     Processor 10           ;   0.9%      ;
+;     Processor 11           ;   0.9%      ;
+;     Processor 12           ;   0.9%      ;
+;     Processor 13           ;   0.9%      ;
+;     Processor 14           ;   0.9%      ;
+;     Processor 15           ;   0.9%      ;
+;     Processor 16           ;   0.9%      ;
 +----------------------------+-------------+
 
 
@@ -2886,13 +2886,13 @@ Warning (15705): Ignored locations or region assignments to the following nodes
     Warning (15706): Node "USB_SCL" is assigned to location or region, but does not exist in design
     Warning (15706): Node "USB_SDA" is assigned to location or region, but does not exist in design
     Warning (15706): Node "USB_WR_N" is assigned to location or region, but does not exist in design
-Info (11798): Fitter preparation operations ending: elapsed time is 00:00:07
+Info (11798): Fitter preparation operations ending: elapsed time is 00:00:06
 Info (170189): Fitter placement preparation operations beginning
 Info (14951): The Fitter is using Advanced Physical Optimization.
-Info (170190): Fitter placement preparation operations ending: elapsed time is 00:01:59
+Info (170190): Fitter placement preparation operations ending: elapsed time is 00:01:54
 Info (170191): Fitter placement operations beginning
 Info (170137): Fitter placement was successful
-Info (170192): Fitter placement operations ending: elapsed time is 00:00:03
+Info (170192): Fitter placement operations ending: elapsed time is 00:00:02
 Info (170193): Fitter routing operations beginning
 Info (170195): Router estimated average interconnect usage is 5% of the available device resources
     Info (170196): Router estimated peak interconnect usage is 25% of the available device resources in the region that extends from location X33_Y35 to location X44_Y45
@@ -2900,7 +2900,7 @@ Info (170199): The Fitter performed an Auto Fit compilation.  Optimizations were
     Info (170201): Optimizations that may affect the design's routability were skipped
     Info (170200): Optimizations that may affect the design's timing were skipped
 Info (170194): Fitter routing operations ending: elapsed time is 00:00:06
-Info (11888): Total time spent on timing analysis during the Fitter is 6.14 seconds.
+Info (11888): Total time spent on timing analysis during the Fitter is 5.63 seconds.
 Info (334003): Started post-fitting delay annotation
 Info (334004): Delay annotation completed successfully
 Info (334003): Started post-fitting delay annotation
@@ -2912,10 +2912,10 @@ Warning (169064): Following 2 pins have no output enable or a GND or VCC output 
     Info (169065): Pin PS2_DAT has a permanently disabled output enable File: C:/Users/yinzh/Desktop/ECE241-snake-game/src/top/top_snake_game_core.v Line: 12
 Info (144001): Generated suppressed messages file C:/Users/yinzh/Desktop/ECE241-snake-game/hw/quartus/output_files/top_snake_game_core.fit.smsg
 Info: Quartus Prime Fitter was successful. 0 errors, 234 warnings
-    Info: Peak virtual memory: 8079 megabytes
-    Info: Processing ended: Sun Nov 16 03:52:40 2025
-    Info: Elapsed time: 00:04:53
-    Info: Total CPU time (on all processors): 00:43:59
+    Info: Peak virtual memory: 8076 megabytes
+    Info: Processing ended: Sun Nov 16 18:37:39 2025
+    Info: Elapsed time: 00:04:39
+    Info: Total CPU time (on all processors): 00:42:37
 
 
 +----------------------------+
