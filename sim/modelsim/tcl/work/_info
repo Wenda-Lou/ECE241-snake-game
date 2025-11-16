@@ -1,0 +1,57 @@
+m255
+K4
+z2
+!s11f vlog 2020.1 2020.02, Feb 28 2020
+13
+!s112 1.1
+!i10d 8192
+!i10e 25
+!i10f 100
+cModel Technology
+Z0 dC:/Users/yinzh/Desktop/ECE241-snake-game/sim/modelsim/tcl
+vsnake_engine
+Z1 !s110 1763277090
+!i10b 1
+!s100 PZz4PM>EoH>BZWNgZQMKb1
+Z2 !s11b Dg1SIo80bB@j0V0VzS_@n1
+IhNhS3CNAN0PWh56HUV:zG3
+Z3 VDg1SIo80bB@j0V0VzS_@n1
+R0
+w1763250810
+8../../../src/game/snake_engine.v
+F../../../src/game/snake_engine.v
+!i122 6
+L0 11 248
+Z4 OV;L;2020.1;71
+r1
+!s85 0
+31
+Z5 !s108 1763277090.000000
+!s107 ../../../src/game/snake_engine.v|
+!s90 -reportprogress|300|+acc|../../../src/game/snake_engine.v|
+!i113 1
+Z6 o+acc
+Z7 tCvgOpt 0
+vtb_snake_engine
+R1
+!i10b 1
+!s100 >B0]DU?[?DcmDPG00d][R3
+R2
+I6CjJk9iiILmC1PlGeDXaa3
+R3
+R0
+w1763276224
+8./tb_snake_engine.v
+F./tb_snake_engine.v
+!i122 7
+L0 6 109
+R4
+r1
+!s85 0
+31
+R5
+!s107 ./tb_snake_engine.v|
+!s90 -reportprogress|300|+acc|./tb_snake_engine.v|
+!i113 1
+R6
+R7

@@ -1,0 +1,2 @@
+Info (10281): Verilog HDL Declaration information at painter.v(16): object "CELL_PX" differs only in case from object "cell_px" in the same scope File: C:/Users/yinzh/Desktop/ECE241-snake-game/src/vga/painter.v Line: 16
+Warning (10268): Verilog HDL information at ps2_rx.v(34): always construct contains both blocking and non-blocking assignments File: C:/Users/yinzh/Desktop/ECE241-snake-game/src/input/ps2_rx.v Line: 34

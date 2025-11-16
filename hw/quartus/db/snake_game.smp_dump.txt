@@ -1,0 +1,15 @@
+
+State Machine - |game|vga_top:u_vga_top|painter:u_painter|state
+Name state.S_GAME_OVER state.S_IDLE state.S_BODY_PIX state.S_BODY_CELL state.S_FRUIT state.S_INIT_BG 
+state.S_INIT_BG 0 0 0 0 0 0 
+state.S_FRUIT 0 0 0 0 1 1 
+state.S_BODY_CELL 0 0 0 1 0 1 
+state.S_BODY_PIX 0 0 1 0 0 1 
+state.S_IDLE 0 1 0 0 0 1 
+state.S_GAME_OVER 1 0 0 0 0 1 
+
+State Machine - |game|vga_top:u_vga_top|fruit_placer:u_fruit|state
+Name state.S_IDLE state.S_DONE state.S_GEN 
+state.S_IDLE 0 0 0 
+state.S_GEN 1 0 1 
+state.S_DONE 1 1 0 

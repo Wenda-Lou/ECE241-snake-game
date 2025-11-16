@@ -1,0 +1,20 @@
+Fitter Status : Successful - Sun Nov 16 03:52:39 2025
+Quartus Prime Version : 24.1std.0 Build 1077 03/04/2025 SC Lite Edition
+Revision Name : top_snake_game_core
+Top-level Entity Name : game
+Family : Cyclone V
+Device : 5CSEMA5F31C6
+Timing Models : Final
+Logic utilization (in ALMs) : 3,158 / 32,070 ( 10 % )
+Total registers : 2499
+Total pins : 36 / 457 ( 8 % )
+Total virtual pins : 0
+Total block memory bits : 2,764,800 / 4,065,280 ( 68 % )
+Total RAM Blocks : 338 / 397 ( 85 % )
+Total DSP Blocks : 1 / 87 ( 1 % )
+Total HSSI RX PCSs : 0
+Total HSSI PMA RX Deserializers : 0
+Total HSSI TX PCSs : 0
+Total HSSI PMA TX Serializers : 0
+Total PLLs : 1 / 6 ( 17 % )
+Total DLLs : 0 / 4 ( 0 % )

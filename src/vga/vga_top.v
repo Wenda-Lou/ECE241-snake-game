@@ -18,6 +18,13 @@ module vga_top(
 
     wire resetn = KEY[0];
 
+    // Grid dimensions (cells)
+    localparam integer H_CELLS = 40;
+    localparam integer V_CELLS = 30;
+
+    // Fruit position in cells (shared between snake_engine and fruit_placer)
+    wire [5:0] fruit_x_cell, fruit_y_cell;
+
     // -------------------------------------------
     // 1 Hz movement tick
     // -------------------------------------------
@@ -29,7 +36,7 @@ module vga_top(
     ) u_move_tick (
         .clk    (CLOCK_50),
         .resetn (resetn),
-        .tick   (snake_step)     // FIXED
+        .tick   (snake_step)
     );
 
     // -------------------------------------------
@@ -40,28 +47,39 @@ module vga_top(
     wire       ate_fruit;
     wire       game_over;
 
+    // Helper signals for occupancy (new head / old tail)
+    wire [5:0] new_head_x_cell, new_head_y_cell;
+    wire       new_head_valid;
+    wire [5:0] old_tail_x_cell, old_tail_y_cell;
+    wire       old_tail_valid;
+
     snake_engine #(
-        .H_CELLS(40),
-        .V_CELLS(30),
+        .H_CELLS(H_CELLS),
+        .V_CELLS(V_CELLS),
         .MAX_LEN(64)
     ) u_snake (
-        .clk               (CLOCK_50),
-        .rst_n             (resetn),
-        .step              (snake_step),
-        .dir               (dir),
-        .fruit_x_cell      (fruit_x_cell),
-        .fruit_y_cell      (fruit_y_cell),
-        .snake_head_x_cell (snake_x_cell6),
-        .snake_head_y_cell (snake_y_cell6),
-        .game_over         (game_over),
-        .ate_fruit         (ate_fruit),
-        .snake_len         (snake_len)
+        .clk                (CLOCK_50),
+        .rst_n              (resetn),
+        .step               (snake_step),
+        .dir                (dir),
+        .fruit_x_cell       (fruit_x_cell),
+        .fruit_y_cell       (fruit_y_cell),
+        .snake_head_x_cell  (snake_x_cell6),
+        .snake_head_y_cell  (snake_y_cell6),
+        .game_over          (game_over),
+        .ate_fruit          (ate_fruit),
+        .snake_len          (snake_len),
+        .new_head_x_cell    (new_head_x_cell),
+        .new_head_y_cell    (new_head_y_cell),
+        .new_head_valid     (new_head_valid),
+        .old_tail_x_cell    (old_tail_x_cell),
+        .old_tail_y_cell    (old_tail_y_cell),
+        .old_tail_valid     (old_tail_valid)
     );
 
     // -------------------------------------------
     // Fruit placer
     // -------------------------------------------
-    wire [5:0] fruit_x_cell, fruit_y_cell;
     wire       fruit_done, fruit_busy;
 
     reg fruit_req;
@@ -73,12 +91,12 @@ module vga_top(
     end
 
     fruit_placer #(
-        .CELL_PX(16),
-        .H_CELLS(40),
-        .V_CELLS(30),
-        .MARGIN_CELLS(1),
-        .TRIES(16),
-        .MIN_DIST(3)
+        .CELL_PX      (16),
+        .H_CELLS      (H_CELLS),
+        .V_CELLS      (V_CELLS),
+        .MARGIN_CELLS (1),
+        .TRIES        (16),
+        .MIN_DIST     (3)
     ) u_fruit (
         .clk          (CLOCK_50),
         .resetn       (resetn),
@@ -91,12 +109,32 @@ module vga_top(
         .busy         (fruit_busy)
     );
 
-    // cell -> pixel
+    // cell -> pixel (fruit center)
     wire [9:0] fruit_cx = {fruit_x_cell, 4'b0000} + 10'd8;
     wire [9:0] fruit_cy = {fruit_y_cell, 4'b0000} + 10'd8;
 
     // -------------------------------------------
-    // Grid map for snake
+    // Snake occupancy bitmap (for full body draw)
+    // -------------------------------------------
+    wire [H_CELLS*V_CELLS-1:0] snake_grid;
+
+    snake_occupancy #(
+        .H_CELLS(H_CELLS),
+        .V_CELLS(V_CELLS)
+    ) u_occ (
+        .clk              (CLOCK_50),
+        .resetn           (resetn),
+        .new_head_x_cell  (new_head_x_cell),
+        .new_head_y_cell  (new_head_y_cell),
+        .new_head_valid   (new_head_valid),
+        .old_tail_x_cell  (old_tail_x_cell),
+        .old_tail_y_cell  (old_tail_y_cell),
+        .old_tail_valid   (old_tail_valid),
+        .grid             (snake_grid)
+    );
+
+    // -------------------------------------------
+    // Grid map for snake head (still available if needed)
     // -------------------------------------------
     wire [9:0] x_min_px, x_max_px;
     wire [9:0] y_min_px, y_max_px;
@@ -134,24 +172,30 @@ module vga_top(
     wire       write_stb;
 
     painter u_painter (
-        .clk       (CLOCK_50),
-        .resetn    (resetn),
+        .clk                (CLOCK_50),
+        .resetn             (resetn),
 
-        .x_min_px  (x_min_px),
-        .x_max_px  (x_max_px),
-        .y_min_px  (y_min_px),
-        .y_max_px  (y_max_px),
+        .x_min_px           (x_min_px),
+        .x_max_px           (x_max_px),
+        .y_min_px           (y_min_px),
+        .y_max_px           (y_max_px),
 
-        .fruit_cx  (fruit_cx),
-        .fruit_cy  (fruit_cy),
+        .fruit_cx           (fruit_cx),
+        .fruit_cy           (fruit_cy),
 
-        .start     (start_frame),   // FIXED POSITION
+        .start              (start_frame),
+        .game_over          (game_over),
+        .snake_dir          (dir),
 
-        .x         (x),
-        .y         (y),
-        .colour    (color_3b),
-        .plot      (write_stb),
-        .busy      (painter_busy)   // FIXED NAME
+        .snake_occ          (snake_grid),
+        .snake_head_x_cell  (snake_x_cell6),
+        .snake_head_y_cell  (snake_y_cell6),
+
+        .x                  (x),
+        .y                  (y),
+        .colour             (color_3b),
+        .plot               (write_stb),
+        .busy               (painter_busy)
     );
 
     // 3-bit to 9-bit colour

@@ -1,66 +1,146 @@
 // ===========================================================
 // Module: painter
 // Description:
-//   初始化背景（黑色+白色边框）+ 绘制红色水果 + 绘制绿色蛇头。
-//   水果中心由顶层传入（像素坐标），半径固定为 6（常量平方，避免额外乘法器）。
+//   Frame-based painter:
+//   - Draws black background + white border
+//   - Draws red circular fruit
+//   - Draws full snake body from occupancy bitmap
+//   - Draws solid red Game Over screen when game_over = 1
 // ===========================================================
-module painter(
+module painter #(
+    parameter integer H_RES    = 640,
+    parameter integer V_RES    = 480,
+    parameter integer H_CELLS  = 40,
+    parameter integer V_CELLS  = 30,
+    parameter integer CELL_PX  = 16
+)(
     input  wire        clk,
     input  wire        resetn,
-    // 蛇头像素范围
+
+    // Unused for now (kept for interface compatibility)
     input  wire [9:0]  x_min_px,
     input  wire [9:0]  x_max_px,
     input  wire [9:0]  y_min_px,
     input  wire [9:0]  y_max_px,
-    // 新增：水果像素中心
+
+    // Fruit pixel center
     input  wire [9:0]  fruit_cx,
     input  wire [9:0]  fruit_cy,
-    // 新增：重绘触发信号
+
+    // Frame trigger
     input  wire        start,
 
-    // 输出到 VGA adapter
+    // Game over flag
+    input  wire        game_over,
+
+    // Snake direction
+    input wire [1:0]  snake_dir,
+
+    // Snake occupancy bitmap in cell coordinates
+    // bit index = y_cell * H_CELLS + x_cell
+    input  wire [H_CELLS*V_CELLS-1:0] snake_occ,
+
+    // Snake head cell (for special coloring)
+    input  wire [5:0]  snake_head_x_cell,
+    input  wire [5:0]  snake_head_y_cell,
+
+    // Outputs to VGA adapter
     output reg  [9:0]  x,
     output reg  [9:0]  y,
     output reg  [2:0]  colour,
     output reg         plot,
     output reg         busy
 );
+    // Basic parameters
+    localparam integer BORDER_THICK = 4;
 
-    // 基本参数
-    localparam H_RES = 640;
-    localparam V_RES = 480;
-    localparam BORDER_THICK = 4;
-
-    // 颜色
+    // Colours (3-bit: R,G,B)
     localparam [2:0] COL_BLACK = 3'b000;
-    localparam [2:0] COL_GREEN = 3'b010;
+    localparam [2:0] COL_GREEN = 3'b010; // head
     localparam [2:0] COL_WHITE = 3'b111;
     localparam [2:0] COL_RED   = 3'b100;
+    localparam [2:0] COL_BODY  = 3'b011;  // body segments (slightly different from head)
 
-    // 水果半径（常量平方）
+    // Fruit radius (squared)
     localparam [3:0] FRUIT_RADIUS    = 4'd6;
     localparam [7:0] FRUIT_RADIUS_SQ = FRUIT_RADIUS * FRUIT_RADIUS;
 
-    // FSM
-    localparam S_INIT_BG = 3'd0; // 画背景+边框
-    localparam S_FRUIT   = 3'd1; // 画水果
-    localparam S_DRAW    = 3'd2; // 画蛇头
-    localparam S_IDLE    = 3'd3; // 静止
+    // FSM states
+    localparam [2:0] S_INIT_BG    = 3'd0; // draw background + border
+    localparam [2:0] S_FRUIT      = 3'd1; // draw fruit circle
+    localparam [2:0] S_BODY_CELL  = 3'd2; // iterate cells
+    localparam [2:0] S_BODY_PIX   = 3'd3; // draw one cell's 16x16 block
+    localparam [2:0] S_IDLE       = 3'd4; // idle between frames
+    localparam [2:0] S_GAME_OVER  = 3'd5; // game over screen
 
     reg [2:0] state;
+
+    // Pixel scan counters for full-frame operations
     reg [9:0] xi, yi;
 
-    // 水果绘制窗口（进入 S_FRUIT 前准备好）
-    reg [9:0] fx_min, fx_max, fy_min, fy_max;
+    // Fruit drawing window
+    reg [9:0] fx_min, fx_max;
+    reg [9:0] fy_min, fy_max;
 
-    // 距离计算（注意位宽：减法用 11-bit 有符号）
+    // Snake body cell scan
+    reg [5:0] cell_x, cell_y;   // 0..H_CELLS-1, 0..V_CELLS-1
+    reg [3:0] cell_px, cell_py; // 0..15: pixel offset in cell
+
+    reg is_eye_pixel;
+
+    // Fruit distance computation (in pixel space)
     wire signed [10:0] sxi = {1'b0, xi};
     wire signed [10:0] syi = {1'b0, yi};
     wire signed [10:0] fcx = {1'b0, fruit_cx};
     wire signed [10:0] fcy = {1'b0, fruit_cy};
     wire signed [10:0] dx  = sxi - fcx;
-    wire signed [10:0] dy  = syi - fcy;   // ✅ 修正为 [10:0]
-    wire        [21:0] dist_sq = dx*dx + dy*dy; // 11x11 → 22-bit
+    wire signed [10:0] dy  = syi - fcy;
+    wire        [21:0] dist_sq = dx*dx + dy*dy;
+
+    // Current cell occupancy lookup
+    wire [10:0] body_index    = cell_y * H_CELLS + cell_x;
+    wire        cell_occupied = snake_occ[body_index];
+
+    always @* begin
+        is_eye_pixel = 1'b0;
+
+        // Only consider head cell
+        if (cell_x == snake_head_x_cell && cell_y == snake_head_y_cell) begin
+            case (snake_dir)
+                2'b00: begin
+                    // Facing right: eyes on the right side (two 2x2 squares)
+                    if ( (cell_px >= 4'd11 && cell_px < 4'd13) &&
+                         ( (cell_py >= 4'd4  && cell_py < 4'd6) ||
+                           (cell_py >= 4'd10 && cell_py < 4'd12) ) )
+                        is_eye_pixel = 1'b1;
+                end
+                2'b01: begin
+                    // Facing left: eyes on the left side
+                    if ( (cell_px >= 4'd3 && cell_px < 4'd5) &&
+                         ( (cell_py >= 4'd4  && cell_py < 4'd6) ||
+                           (cell_py >= 4'd10 && cell_py < 4'd12) ) )
+                        is_eye_pixel = 1'b1;
+                end
+                2'b10: begin
+                    // Facing up: eyes at the top
+                    if ( (cell_py >= 4'd3 && cell_py < 4'd5) &&
+                         ( (cell_px >= 4'd4  && cell_px < 4'd6) ||
+                           (cell_px >= 4'd10 && cell_px < 4'd12) ) )
+                        is_eye_pixel = 1'b1;
+                end
+                2'b11: begin
+                    // Facing down: eyes at the bottom
+                    if ( (cell_py >= 4'd11 && cell_py < 4'd13) &&
+                         ( (cell_px >= 4'd4  && cell_px < 4'd6) ||
+                           (cell_px >= 4'd10 && cell_px < 4'd12) ) )
+                        is_eye_pixel = 1'b1;
+                end
+                default: begin
+                    is_eye_pixel = 1'b0;
+                end
+            endcase
+        end
+    end
 
     always @(posedge clk or negedge resetn) begin
         if (!resetn) begin
@@ -72,15 +152,26 @@ module painter(
             colour <= COL_BLACK;
             plot   <= 1'b0;
             busy   <= 1'b1;
+
             fx_min <= 10'd0; fx_max <= 10'd0;
             fy_min <= 10'd0; fy_max <= 10'd0;
+
+            cell_x  <= 6'd0;
+            cell_y  <= 6'd0;
+            cell_px <= 4'd0;
+            cell_py <= 4'd0;
         end else begin
-            plot <= 1'b0; // 默认不写
+            // default: do not write unless explicitly set
+            plot <= 1'b0;
+
             case (state)
                 // -------------------------------------------------
-                // 初始化背景：黑色 + 白色边框
+                // Draw background + border
                 // -------------------------------------------------
                 S_INIT_BG: begin
+                    busy <= 1'b1;
+
+                    // Border = white, inside = black
                     if (xi < BORDER_THICK || xi >= H_RES - BORDER_THICK ||
                         yi < BORDER_THICK || yi >= V_RES - BORDER_THICK)
                         colour <= COL_WHITE;
@@ -92,79 +183,199 @@ module painter(
                     plot <= 1'b1;
 
                     if (xi == H_RES - 1) begin
-                        xi <= 0;
                         if (yi == V_RES - 1) begin
-                            // 准备水果窗口（防越界）
+                            // Finished full screen background
+                            // Prepare fruit window (clamped to screen)
                             fx_min <= (fruit_cx > FRUIT_RADIUS) ? (fruit_cx - FRUIT_RADIUS) : 10'd0;
                             fy_min <= (fruit_cy > FRUIT_RADIUS) ? (fruit_cy - FRUIT_RADIUS) : 10'd0;
                             fx_max <= (fruit_cx + FRUIT_RADIUS <= H_RES-1) ? (fruit_cx + FRUIT_RADIUS) : (H_RES-1);
                             fy_max <= (fruit_cy + FRUIT_RADIUS <= V_RES-1) ? (fruit_cy + FRUIT_RADIUS) : (V_RES-1);
+
                             xi     <= (fruit_cx > FRUIT_RADIUS) ? (fruit_cx - FRUIT_RADIUS) : 10'd0;
                             yi     <= (fruit_cy > FRUIT_RADIUS) ? (fruit_cy - FRUIT_RADIUS) : 10'd0;
                             state  <= S_FRUIT;
-                        end else
-                            yi <= yi + 1'b1;
-                    end else
-                        xi <= xi + 1'b1;
+                        end else begin
+                            xi <= 10'd0;
+                            yi <= yi + 10'd1;
+                        end
+                    end else begin
+                        xi <= xi + 10'd1;
+                    end
                 end
 
                 // -------------------------------------------------
-                // 绘制红色水果（近似圆，仅在圆内 plot=1）
+                // Draw red circular fruit
                 // -------------------------------------------------
                 S_FRUIT: begin
+                    busy <= 1'b1;
+
+                    // Only draw inside the window; outside we leave bg as is
                     if (dist_sq <= FRUIT_RADIUS_SQ) begin
                         colour <= COL_RED;
                         x      <= xi;
                         y      <= yi;
                         plot   <= 1'b1;
                     end
-                    // 扫描水果窗口
+
+                    // Scan fruit window
                     if (xi == fx_max) begin
                         xi <= fx_min;
                         if (yi == fy_max) begin
-                            yi    <= y_min_px;
-                            xi    <= x_min_px;
-                            state <= S_DRAW;
-                        end else
-                            yi <= yi + 1'b1;
-                    end else
-                        xi <= xi + 1'b1;
+                            // Finished fruit; now iterate snake body cells
+                            cell_x  <= 6'd0;
+                            cell_y  <= 6'd0;
+                            cell_px <= 4'd0;
+                            cell_py <= 4'd0;
+                            state   <= S_BODY_CELL;
+                        end else begin
+                            yi <= yi + 10'd1;
+                        end
+                    end else begin
+                        xi <= xi + 10'd1;
+                    end
                 end
 
                 // -------------------------------------------------
-                // 绘制蛇头：绿色方块
+                // Iterate all cells; if occupied, go draw its 16x16 block
                 // -------------------------------------------------
-                S_DRAW: begin
-                    colour <= COL_GREEN;
-                    x      <= xi;
-                    y      <= yi;
+                S_BODY_CELL: begin
+                    busy <= 1'b1;
+
+                    if (cell_y < V_CELLS) begin
+                        if (cell_occupied) begin
+                            // Start drawing this occupied cell
+                            cell_px <= 4'd0;
+                            cell_py <= 4'd0;
+                            state   <= S_BODY_PIX;
+                        end else begin
+                            // Move to next cell
+                            if (cell_x == H_CELLS - 1) begin
+                                cell_x <= 6'd0;
+                                if (cell_y == V_CELLS - 1) begin
+                                    // Finished last cell
+                                    state <= S_IDLE;
+                                    busy  <= 1'b0;
+                                end else begin
+                                    cell_y <= cell_y + 6'd1;
+                                end
+                            end else begin
+                                cell_x <= cell_x + 6'd1;
+                            end
+                        end
+                    end else begin
+                        // Safety: out of range, go idle
+                        state <= S_IDLE;
+                        busy  <= 1'b0;
+                    end
+                end
+
+                // -------------------------------------------------
+                // Draw all pixels of one occupied cell as a solid block
+                // -------------------------------------------------
+                S_BODY_PIX: begin
+                    busy   <= 1'b1;
+
+                    // Head cell vs body cell colour, with eyes
+                    if (cell_x == snake_head_x_cell && cell_y == snake_head_y_cell) begin
+                        if (is_eye_pixel)
+                            colour <= COL_WHITE;  // eyes
+                        else
+                            colour <= COL_GREEN;  // head base colour
+                    end else begin
+                        colour <= COL_BODY;       // normal body segments
+                    end
+
+                    x      <= {cell_x, 4'b0000} + cell_px; // cell_x * 16 + offset
+                    y      <= {cell_y, 4'b0000} + cell_py; // cell_y * 16 + offset
                     plot   <= 1'b1;
 
-                    if (xi == x_max_px) begin
-                        xi <= x_min_px;
-                        if (yi == y_max_px) begin
-                            state <= S_IDLE;
-                            busy  <= 1'b0;
-                        end else
-                            yi <= yi + 1'b1;
-                    end else
-                        xi <= xi + 1'b1;
+                    if (cell_px == CELL_PX - 1) begin
+                        cell_px <= 4'd0;
+                        if (cell_py == CELL_PX - 1) begin
+                            cell_py <= 4'd0;
+                            // Finished this cell, move to next cell
+                            if (cell_x == H_CELLS - 1) begin
+                                cell_x <= 6'd0;
+                                if (cell_y == V_CELLS - 1) begin
+                                    state <= S_IDLE; // finished all cells
+                                    busy  <= 1'b0;
+                                end else begin
+                                    cell_y <= cell_y + 6'd1;
+                                    state  <= S_BODY_CELL;
+                                end
+                            end else begin
+                                cell_x <= cell_x + 6'd1;
+                                state  <= S_BODY_CELL;
+                            end
+                        end else begin
+                            cell_py <= cell_py + 4'd1;
+                        end
+                    end else begin
+                        cell_px <= cell_px + 4'd1;
+                    end
                 end
 
                 // -------------------------------------------------
-                // 静止显示
+                // Idle: wait for start or game_over
                 // -------------------------------------------------
                 S_IDLE: begin
                     busy <= 1'b0;
-                    if (start) begin
-                        // 重置扫描坐标，准备重绘
-                        xi     <= 10'd0;
-                        yi     <= 10'd0;
-                        busy   <= 1'b1;
-                        state  <= S_INIT_BG;
+                    if (game_over) begin
+                        // Start drawing game over screen
+                        xi    <= 10'd0;
+                        yi    <= 10'd0;
+                        state <= S_GAME_OVER;
+                    end else if (start) begin
+                        // Start next normal frame
+                        xi    <= 10'd0;
+                        yi    <= 10'd0;
+                        busy  <= 1'b1;
+                        state <= S_INIT_BG;
                     end
+                end
+
+                // -------------------------------------------------
+                // Game over screen: solid red inside border
+                // -------------------------------------------------
+                S_GAME_OVER: begin
+                    busy <= 1'b1;
+                    if (xi < H_RES && yi < V_RES) begin
+                        x <= xi;
+                        y <= yi;
+
+                        if (xi < BORDER_THICK || xi >= H_RES - BORDER_THICK ||
+                            yi < BORDER_THICK || yi >= V_RES - BORDER_THICK)
+                            colour <= COL_WHITE;
+                        else
+                            colour <= COL_RED;
+
+                        plot <= 1'b1;
+
+                        if (xi == H_RES - 1) begin
+                            xi <= 10'd0;
+                            if (yi == V_RES - 1) begin
+                                // Finished game-over frame; remain idle
+                                busy  <= 1'b0;
+                                state <= S_IDLE;
+                            end else begin
+                                yi <= yi + 10'd1;
+                            end
+                        end else begin
+                            xi <= xi + 10'd1;
+                        end
+                    end else begin
+                        // Safety
+                        busy  <= 1'b0;
+                        state <= S_IDLE;
+                    end
+                end
+
+                default: begin
+                    state <= S_IDLE;
+                    busy  <= 1'b0;
                 end
             endcase
         end
     end
+
 endmodule
