@@ -13,14 +13,13 @@ set LIB_NAME work
 vlib $LIB_NAME
 vmap $LIB_NAME $LIB_NAME
 
-vlog +acc "$SRC_DIR_GAME/snake_engine.v"
-vlog +acc "$TB_DIR/tb_snake_engine.v"
+# Compile DUT and TB
+vlog snake_engine.v
+vlog tb_snake_engine.v
 
-# --- 仿真 ---
-vsim -voptargs="+acc" $LIB_NAME.$TOP_TB
+# Elaborate testbench
+vsim -t 1ns work.tb_snake_engine
 
-# --- 波形 ---
-add wave -noupdate -r sim:/$TOP_TB/*
+# Load waveform configuration
+do wave_snake_engine.do
 
-# --- 运行 ---
-run -all
