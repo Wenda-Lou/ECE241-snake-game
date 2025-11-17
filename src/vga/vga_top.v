@@ -40,6 +40,19 @@ module vga_top(
     );
 
     // -------------------------------------------
+    // 30 FPS frame tick
+    // -------------------------------------------
+    wire frame_tick;
+    frame_tick #(
+        .INPUT_CLK_FREQ(50_000_000),
+        .FRAME_RATE(30)       // 30 FPS
+    ) u_frame_tick (
+        .clk(CLOCK_50),
+        .resetn(resetn),
+        .tick(frame_tick)
+    );
+
+    // -------------------------------------------
     // Snake Engine
     // -------------------------------------------
     wire [5:0] snake_x_cell6, snake_y_cell6;
