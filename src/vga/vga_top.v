@@ -169,9 +169,9 @@ module vga_top(
 
     always @(posedge CLOCK_50 or negedge resetn) begin
         if (!resetn)
+            start_frame <= 1'b1;                 // 上电时画第一帧
+        else if (!painter_busy && frame_tick)    // 只有“空闲 + 到帧时间”才拉高
             start_frame <= 1'b1;
-        else if (!painter_busy)
-            start_frame <= 1'b1;   // trigger next frame
         else
             start_frame <= 1'b0;
     end
