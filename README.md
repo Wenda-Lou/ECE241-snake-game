@@ -1,0 +1,1 @@
+The team’s design idea is to develop a snake game for this project. The game asks the user to control the direction of the snake to avoid hitting the wall or itself while hitting dots to get a score and grow bigger. The design includes input decoding, direction control, snake engine (move/grow/collide), grid occupancy and food placer, with separate pixel/game clocks.
