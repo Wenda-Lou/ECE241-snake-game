@@ -61,6 +61,25 @@ module painter #(
     localparam [2:0] COL_RED   = 3'b100;
     localparam [2:0] COL_BODY  = 3'b011;  // body segments (slightly different from head)
 
+    // ---------- "GAME OVER" text layout ----------
+    localparam integer FONT_W      = 8;
+    localparam integer FONT_H      = 8;
+    localparam integer FONT_SCALE  = 2;      // each font pixel => 2x2 screen pixels
+    localparam integer TEXT_LEN    = 9;      // "GAME OVER"
+
+    localparam integer TEXT_PIX_W  = FONT_W * TEXT_LEN * FONT_SCALE;
+    localparam integer TEXT_PIX_H  = FONT_H * FONT_SCALE;
+
+    localparam integer TEXT_X0     = (H_RES - TEXT_PIX_W) / 2;
+    localparam integer TEXT_Y0     = (V_RES - TEXT_PIX_H) / 2;
+
+    // Helpers for Game Over text drawing
+    integer tx, ty;
+    integer char_x, char_y;
+    integer char_idx;
+    integer col_in_char;
+    reg [7:0] row_bits;
+
     // Fruit radius (squared)
     localparam [3:0] FRUIT_RADIUS    = 4'd6;
     localparam [7:0] FRUIT_RADIUS_SQ = FRUIT_RADIUS * FRUIT_RADIUS;
@@ -100,6 +119,129 @@ module painter #(
     // Current cell occupancy lookup
     wire [10:0] body_index    = cell_y * H_CELLS + cell_x;
     wire        cell_occupied = snake_occ[body_index];
+
+    // ==========================================================
+    // Font function: 8x8 bitmap for characters in "GAME OVER"
+    // char_idx mapping:
+    //   0:'G', 1:'A', 2:'M', 3:'E', 4:' ' (space),
+    //   5:'O', 6:'V', 7:'E', 8:'R'
+    // row: 0..7 (top to bottom)
+    // return[7] = leftmost pixel, return[0] = rightmost pixel
+    // ==========================================================
+    function [7:0] glyph_row;
+        input [3:0] char_idx;
+        input [2:0] row;
+        begin
+            case (char_idx)
+                // 'G'
+                4'd0: begin
+                    case (row)
+                        3'd0: glyph_row = 8'b00111100; // ..####..
+                        3'd1: glyph_row = 8'b01100110; // .##..##.
+                        3'd2: glyph_row = 8'b01100000; // .##.....
+                        3'd3: glyph_row = 8'b01101110; // .##.###.
+                        3'd4: glyph_row = 8'b01100110; // .##..##.
+                        3'd5: glyph_row = 8'b01100110; // .##..##.
+                        3'd6: glyph_row = 8'b00111100; // ..####..
+                        default: glyph_row = 8'b00000000;
+                    endcase
+                end
+
+                // 'A'
+                4'd1: begin
+                    case (row)
+                        3'd0: glyph_row = 8'b00011000; // ...##...
+                        3'd1: glyph_row = 8'b00111100; // ..####..
+                        3'd2: glyph_row = 8'b01100110; // .##..##.
+                        3'd3: glyph_row = 8'b01100110; // .##..##.
+                        3'd4: glyph_row = 8'b01111110; // .######.
+                        3'd5: glyph_row = 8'b01100110; // .##..##.
+                        3'd6: glyph_row = 8'b01100110; // .##..##.
+                        default: glyph_row = 8'b00000000;
+                    endcase
+                end
+
+                // 'M'
+                4'd2: begin
+                    case (row)
+                        3'd0: glyph_row = 8'b01100110; // .##..##.
+                        3'd1: glyph_row = 8'b01111110; // .######.
+                        3'd2: glyph_row = 8'b01111110; // .######.
+                        3'd3: glyph_row = 8'b01100110; // .##..##.
+                        3'd4: glyph_row = 8'b01100110; // .##..##.
+                        3'd5: glyph_row = 8'b01100110; // .##..##.
+                        3'd6: glyph_row = 8'b01100110; // .##..##.
+                        default: glyph_row = 8'b00000000;
+                    endcase
+                end
+
+                // 'E'
+                4'd3,
+                4'd7: begin // reuse for both 'E' in GAME and OVER
+                    case (row)
+                        3'd0: glyph_row = 8'b01111110; // .######.
+                        3'd1: glyph_row = 8'b01100000; // .##.....
+                        3'd2: glyph_row = 8'b01100000; // .##.....
+                        3'd3: glyph_row = 8'b01111100; // .#####..
+                        3'd4: glyph_row = 8'b01100000; // .##.....
+                        3'd5: glyph_row = 8'b01100000; // .##.....
+                        3'd6: glyph_row = 8'b01111110; // .######.
+                        default: glyph_row = 8'b00000000;
+                    endcase
+                end
+
+                // ' ' (space)
+                4'd4: begin
+                    glyph_row = 8'b00000000;
+                end
+
+                // 'O'
+                4'd5: begin
+                    case (row)
+                        3'd0: glyph_row = 8'b00111100; // ..####..
+                        3'd1: glyph_row = 8'b01100110; // .##..##.
+                        3'd2: glyph_row = 8'b01100110; // .##..##.
+                        3'd3: glyph_row = 8'b01100110; // .##..##.
+                        3'd4: glyph_row = 8'b01100110; // .##..##.
+                        3'd5: glyph_row = 8'b01100110; // .##..##.
+                        3'd6: glyph_row = 8'b00111100; // ..####..
+                        default: glyph_row = 8'b00000000;
+                    endcase
+                end
+
+                // 'V'
+                4'd6: begin
+                    case (row)
+                        3'd0: glyph_row = 8'b01100110; // .##..##.
+                        3'd1: glyph_row = 8'b01100110; // .##..##.
+                        3'd2: glyph_row = 8'b01100110; // .##..##.
+                        3'd3: glyph_row = 8'b01100110; // .##..##.
+                        3'd4: glyph_row = 8'b01100110; // .##..##.
+                        3'd5: glyph_row = 8'b00111100; // ..####..
+                        3'd6: glyph_row = 8'b00011000; // ...##...
+                        default: glyph_row = 8'b00000000;
+                    endcase
+                end
+
+                // 'R'
+                4'd8: begin
+                    case (row)
+                        3'd0: glyph_row = 8'b01111100; // .#####..
+                        3'd1: glyph_row = 8'b01100110; // .##..##.
+                        3'd2: glyph_row = 8'b01100110; // .##..##.
+                        3'd3: glyph_row = 8'b01111100; // .#####..
+                        3'd4: glyph_row = 8'b01101100; // .##.##..
+                        3'd5: glyph_row = 8'b01100110; // .##..##.
+                        3'd6: glyph_row = 8'b01100110; // .##..##.
+                        default: glyph_row = 8'b00000000;
+                    endcase
+                end
+
+                default: glyph_row = 8'b00000000;
+            endcase
+        end
+    endfunction
+
 
     always @* begin
         is_eye_pixel = 1'b0;
@@ -335,26 +477,55 @@ module painter #(
                 end
 
                 // -------------------------------------------------
-                // Game over screen: solid red inside border
+                // Game over screen: red background + white border +
+                // centered "GAME OVER" text in white
                 // -------------------------------------------------
                 S_GAME_OVER: begin
                     busy <= 1'b1;
+
                     if (xi < H_RES && yi < V_RES) begin
                         x <= xi;
                         y <= yi;
 
+                        // Default: border white, inside red background
                         if (xi < BORDER_THICK || xi >= H_RES - BORDER_THICK ||
-                            yi < BORDER_THICK || yi >= V_RES - BORDER_THICK)
+                            yi < BORDER_THICK || yi >= V_RES - BORDER_THICK) begin
                             colour <= COL_WHITE;
-                        else
-                            colour <= COL_RED;
+                        end else begin
+                            colour <= COL_RED; // background color
+
+                            // Check if (xi, yi) falls inside "GAME OVER" text box
+                            if ( (xi >= TEXT_X0) && (xi < TEXT_X0 + TEXT_PIX_W) &&
+                                 (yi >= TEXT_Y0) && (yi < TEXT_Y0 + TEXT_PIX_H) ) begin
+                                // Local coordinates inside text box
+                                tx = xi - TEXT_X0;  // 0 .. TEXT_PIX_W-1
+                                ty = yi - TEXT_Y0;  // 0 .. TEXT_PIX_H-1
+
+                                // Map to font pixel coordinates (before scaling)
+                                char_x = tx / FONT_SCALE; // 0 .. TEXT_LEN*FONT_W-1
+                                char_y = ty / FONT_SCALE; // 0 .. FONT_H-1
+
+                                // Which character (0..TEXT_LEN-1)?
+                                char_idx    = char_x / FONT_W;       // 0..8
+                                col_in_char = char_x % FONT_W;       // 0..7
+
+                                // Get bitmap row for this character & row
+                                row_bits = glyph_row(char_idx[3:0], char_y[2:0]);
+
+                                // Bit [7] is leftmost pixel, [0] is rightmost
+                                if (row_bits[FONT_W-1-col_in_char]) begin
+                                    colour <= COL_WHITE;  // draw text pixel
+                                end
+                            end
+                        end
 
                         plot <= 1'b1;
 
+                        // Scan full frame
                         if (xi == H_RES - 1) begin
                             xi <= 10'd0;
                             if (yi == V_RES - 1) begin
-                                // Finished game-over frame; remain idle
+                                // Finished game-over frame; remain in IDLE
                                 busy  <= 1'b0;
                                 state <= S_IDLE;
                             end else begin
