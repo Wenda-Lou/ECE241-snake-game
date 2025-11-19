@@ -10,6 +10,10 @@ module game (
 
     inout  wire        PS2_CLK,    // PS/2 clock (open-drain on board)
     inout  wire        PS2_DAT,    // PS/2 data  (open-drain on board)
+	 
+    output wire [6:0]  HEX4,       // ones digit
+    output wire [6:0]  HEX5,       // tens digit
+	 
 
     // VGA signals to DE1-SoC connector
     output wire [7:0]  VGA_R,
@@ -78,7 +82,10 @@ module game (
     );
 	 
 
-
+	
+	 wire score_inc;
+	 
+	 
     // VGA + Snake Game Core
     // vga_top does:
     //   - game_tick (1 Hz) inside
@@ -92,6 +99,7 @@ module game (
         .CLOCK_50   (CLOCK_50),
         .KEY        ({1'b0, resetn}),  // KEY[1:0] for vga_top: {unused, resetn}
         .dir        (dir),
+		  .score_inc  (score_inc),
         .VGA_R      (VGA_R),
         .VGA_G      (VGA_G),
         .VGA_B      (VGA_B),
@@ -100,6 +108,14 @@ module game (
         .VGA_BLANK_N(VGA_BLANK_N),
         .VGA_SYNC_N (VGA_SYNC_N),
         .VGA_CLK    (VGA_CLK)
+    );
+	 
+	 score_display u_score_display (
+        .clk       (CLOCK_50),
+        .resetn    (resetn),
+        .score_inc (score_inc),
+        .HEX_TENS  (HEX5),  // tens digit
+        .HEX_ONES  (HEX4)   // ones digit
     );
 
 endmodule
