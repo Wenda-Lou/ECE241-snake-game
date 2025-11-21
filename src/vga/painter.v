@@ -33,6 +33,9 @@ module painter #(
     // Game over flag
     input  wire        game_over,
 
+    // Game started flag (0 -> show splash screen)
+    input  wire        game_started,
+
     // Snake direction
     input wire [1:0]  snake_dir,
 
@@ -73,6 +76,13 @@ module painter #(
     localparam integer TEXT_X0     = (H_RES - TEXT_PIX_W) / 2;
     localparam integer TEXT_Y0     = (V_RES - TEXT_PIX_H) / 2;
 
+    // ---------- "PRESS ENTER TO START" text layout ----------
+    localparam integer START_TEXT_LEN    = 20;
+    localparam integer START_TEXT_PIX_W  = FONT_W * START_TEXT_LEN * FONT_SCALE;
+    localparam integer START_TEXT_PIX_H  = FONT_H * FONT_SCALE;
+    localparam integer START_TEXT_X0     = (H_RES - START_TEXT_PIX_W) / 2;
+    localparam integer START_TEXT_Y0     = (V_RES - START_TEXT_PIX_H) / 2;
+
     // Helpers for Game Over text drawing
     integer tx, ty;
     integer char_x, char_y;
@@ -85,12 +95,13 @@ module painter #(
     localparam [7:0] FRUIT_RADIUS_SQ = FRUIT_RADIUS * FRUIT_RADIUS;
 
     // FSM states
-    localparam [2:0] S_INIT_BG    = 3'd0; // draw background + border
-    localparam [2:0] S_FRUIT      = 3'd1; // draw fruit circle
-    localparam [2:0] S_BODY_CELL  = 3'd2; // iterate cells
-    localparam [2:0] S_BODY_PIX   = 3'd3; // draw one cell's 16x16 block
-    localparam [2:0] S_IDLE       = 3'd4; // idle between frames
-    localparam [2:0] S_GAME_OVER  = 3'd5; // game over screen
+    localparam [2:0] S_INIT_BG       = 3'd0; // draw background + border
+    localparam [2:0] S_FRUIT         = 3'd1; // draw fruit circle
+    localparam [2:0] S_BODY_CELL     = 3'd2; // iterate cells
+    localparam [2:0] S_BODY_PIX      = 3'd3; // draw one cell's 16x16 block
+    localparam [2:0] S_IDLE          = 3'd4; // idle between frames
+    localparam [2:0] S_GAME_OVER     = 3'd5; // game over screen
+    localparam [2:0] S_START_SCREEN  = 3'd6; // splash screen
 
     reg [2:0] state;
 
@@ -120,11 +131,25 @@ module painter #(
     wire [10:0] body_index    = cell_y * H_CELLS + cell_x;
     wire        cell_occupied = snake_occ[body_index];
 
+    // Character indices for glyph_row
+    localparam [3:0] CHAR_G = 4'd0;
+    localparam [3:0] CHAR_A = 4'd1;
+    localparam [3:0] CHAR_M = 4'd2;
+    localparam [3:0] CHAR_E = 4'd3;
+    localparam [3:0] CHAR_SPC = 4'd4;
+    localparam [3:0] CHAR_O = 4'd5;
+    localparam [3:0] CHAR_V = 4'd6;
+    localparam [3:0] CHAR_E2 = 4'd7; // reuse for 'E'
+    localparam [3:0] CHAR_R = 4'd8;
+    localparam [3:0] CHAR_P = 4'd9;
+    localparam [3:0] CHAR_S = 4'd10;
+    localparam [3:0] CHAR_T = 4'd11;
+    localparam [3:0] CHAR_N = 4'd12;
+
     // ==========================================================
-    // Font function: 8x8 bitmap for characters in "GAME OVER"
-    // char_idx mapping:
-    //   0:'G', 1:'A', 2:'M', 3:'E', 4:' ' (space),
-    //   5:'O', 6:'V', 7:'E', 8:'R'
+    // Font function: 8x8 bitmap for drawing text
+    // Existing mapping maintained for "GAME OVER" and extended
+    // for start-screen text.
     // row: 0..7 (top to bottom)
     // return[7] = leftmost pixel, return[0] = rightmost pixel
     // ==========================================================
@@ -134,7 +159,7 @@ module painter #(
         begin
             case (char_idx)
                 // 'G'
-                4'd0: begin
+                CHAR_G: begin
                     case (row)
                         3'd0: glyph_row = 8'b00111100; // ..####..
                         3'd1: glyph_row = 8'b01100110; // .##..##.
@@ -148,7 +173,7 @@ module painter #(
                 end
 
                 // 'A'
-                4'd1: begin
+                CHAR_A: begin
                     case (row)
                         3'd0: glyph_row = 8'b00011000; // ...##...
                         3'd1: glyph_row = 8'b00111100; // ..####..
@@ -162,7 +187,7 @@ module painter #(
                 end
 
                 // 'M'
-                4'd2: begin
+                CHAR_M: begin
                     case (row)
                         3'd0: glyph_row = 8'b01100110; // .##..##.
                         3'd1: glyph_row = 8'b01111110; // .######.
@@ -176,8 +201,8 @@ module painter #(
                 end
 
                 // 'E'
-                4'd3,
-                4'd7: begin // reuse for both 'E' in GAME and OVER
+                CHAR_E,
+                CHAR_E2: begin // reuse for both 'E' in GAME and OVER
                     case (row)
                         3'd0: glyph_row = 8'b01111110; // .######.
                         3'd1: glyph_row = 8'b01100000; // .##.....
@@ -191,12 +216,12 @@ module painter #(
                 end
 
                 // ' ' (space)
-                4'd4: begin
+                CHAR_SPC: begin
                     glyph_row = 8'b00000000;
                 end
 
                 // 'O'
-                4'd5: begin
+                CHAR_O: begin
                     case (row)
                         3'd0: glyph_row = 8'b00111100; // ..####..
                         3'd1: glyph_row = 8'b01100110; // .##..##.
@@ -210,7 +235,7 @@ module painter #(
                 end
 
                 // 'V'
-                4'd6: begin
+                CHAR_V: begin
                     case (row)
                         3'd0: glyph_row = 8'b01100110; // .##..##.
                         3'd1: glyph_row = 8'b01100110; // .##..##.
@@ -224,7 +249,7 @@ module painter #(
                 end
 
                 // 'R'
-                4'd8: begin
+                CHAR_R: begin
                     case (row)
                         3'd0: glyph_row = 8'b01111100; // .#####..
                         3'd1: glyph_row = 8'b01100110; // .##..##.
@@ -237,7 +262,93 @@ module painter #(
                     endcase
                 end
 
+                // 'P'
+                CHAR_P: begin
+                    case (row)
+                        3'd0: glyph_row = 8'b01111100; // .#####..
+                        3'd1: glyph_row = 8'b01100110; // .##..##.
+                        3'd2: glyph_row = 8'b01100110; // .##..##.
+                        3'd3: glyph_row = 8'b01111100; // .#####..
+                        3'd4: glyph_row = 8'b01100000; // .##.....
+                        3'd5: glyph_row = 8'b01100000; // .##.....
+                        3'd6: glyph_row = 8'b01100000; // .##.....
+                        default: glyph_row = 8'b00000000;
+                    endcase
+                end
+
+                // 'S'
+                CHAR_S: begin
+                    case (row)
+                        3'd0: glyph_row = 8'b00111110; // ..#####.
+                        3'd1: glyph_row = 8'b01100000; // .##.....
+                        3'd2: glyph_row = 8'b01111000; // .####...
+                        3'd3: glyph_row = 8'b00011100; // ...###..
+                        3'd4: glyph_row = 8'b00000110; // .....##.
+                        3'd5: glyph_row = 8'b01100110; // .##..##.
+                        3'd6: glyph_row = 8'b00111100; // ..####..
+                        default: glyph_row = 8'b00000000;
+                    endcase
+                end
+
+                // 'T'
+                CHAR_T: begin
+                    case (row)
+                        3'd0: glyph_row = 8'b01111110; // .######.
+                        3'd1: glyph_row = 8'b00011000; // ...##...
+                        3'd2: glyph_row = 8'b00011000; // ...##...
+                        3'd3: glyph_row = 8'b00011000; // ...##...
+                        3'd4: glyph_row = 8'b00011000; // ...##...
+                        3'd5: glyph_row = 8'b00011000; // ...##...
+                        3'd6: glyph_row = 8'b00011000; // ...##...
+                        default: glyph_row = 8'b00000000;
+                    endcase
+                end
+
+                // 'N'
+                CHAR_N: begin
+                    case (row)
+                        3'd0: glyph_row = 8'b01100110; // .##..##.
+                        3'd1: glyph_row = 8'b01110110; // .###.##.
+                        3'd2: glyph_row = 8'b01111110; // .######.
+                        3'd3: glyph_row = 8'b01111110; // .######.
+                        3'd4: glyph_row = 8'b01101110; // .##.###.
+                        3'd5: glyph_row = 8'b01100110; // .##..##.
+                        3'd6: glyph_row = 8'b01100110; // .##..##.
+                        default: glyph_row = 8'b00000000;
+                    endcase
+                end
+
                 default: glyph_row = 8'b00000000;
+            endcase
+        end
+    endfunction
+
+    // Map start-screen character index to glyph enum
+    function [3:0] start_text_char;
+        input [4:0] idx;
+        begin
+            case (idx)
+                5'd0:  start_text_char = CHAR_P;   // P
+                5'd1:  start_text_char = CHAR_R;   // R
+                5'd2:  start_text_char = CHAR_E;   // E
+                5'd3:  start_text_char = CHAR_S;   // S
+                5'd4:  start_text_char = CHAR_S;   // S
+                5'd5:  start_text_char = CHAR_SPC; // space
+                5'd6:  start_text_char = CHAR_E;   // E
+                5'd7:  start_text_char = CHAR_N;   // N
+                5'd8:  start_text_char = CHAR_T;   // T
+                5'd9:  start_text_char = CHAR_E;   // E
+                5'd10: start_text_char = CHAR_R;   // R
+                5'd11: start_text_char = CHAR_SPC; // space
+                5'd12: start_text_char = CHAR_T;   // T
+                5'd13: start_text_char = CHAR_O;   // O
+                5'd14: start_text_char = CHAR_SPC; // space
+                5'd15: start_text_char = CHAR_S;   // S
+                5'd16: start_text_char = CHAR_T;   // T
+                5'd17: start_text_char = CHAR_A;   // A
+                5'd18: start_text_char = CHAR_R;   // R
+                5'd19: start_text_char = CHAR_T;   // T
+                default: start_text_char = CHAR_SPC;
             endcase
         end
     endfunction
@@ -462,7 +573,12 @@ module painter #(
                 // -------------------------------------------------
                 S_IDLE: begin
                     busy <= 1'b0;
-                    if (game_over) begin
+                    if (!game_started) begin
+                        xi    <= 10'd0;
+                        yi    <= 10'd0;
+                        busy  <= 1'b1;
+                        state <= S_START_SCREEN;
+                    end else if (game_over) begin
                         // Start drawing game over screen
                         xi    <= 10'd0;
                         yi    <= 10'd0;
@@ -536,6 +652,52 @@ module painter #(
                         end
                     end else begin
                         // Safety
+                        busy  <= 1'b0;
+                        state <= S_IDLE;
+                    end
+                end
+
+                // -------------------------------------------------
+                // Splash screen before the game starts
+                // -------------------------------------------------
+                S_START_SCREEN: begin
+                    busy <= 1'b1;
+
+                    if (xi < H_RES && yi < V_RES) begin
+                        x <= xi;
+                        y <= yi;
+                        colour <= COL_BLACK;
+
+                        if ((xi >= START_TEXT_X0) && (xi < START_TEXT_X0 + START_TEXT_PIX_W) &&
+                            (yi >= START_TEXT_Y0) && (yi < START_TEXT_Y0 + START_TEXT_PIX_H)) begin
+                            tx = xi - START_TEXT_X0;
+                            ty = yi - START_TEXT_Y0;
+                            char_x = tx / FONT_SCALE;
+                            char_y = ty / FONT_SCALE;
+                            char_idx = char_x / FONT_W;
+                            if (char_idx < START_TEXT_LEN) begin
+                                col_in_char = char_x % FONT_W;
+                                row_bits = glyph_row(start_text_char(char_idx[4:0]), char_y[2:0]);
+                                if (row_bits[FONT_W-1-col_in_char]) begin
+                                    colour <= COL_WHITE;
+                                end
+                            end
+                        end
+
+                        plot <= 1'b1;
+
+                        if (xi == H_RES - 1) begin
+                            xi <= 10'd0;
+                            if (yi == V_RES - 1) begin
+                                busy  <= 1'b0;
+                                state <= S_IDLE;
+                            end else begin
+                                yi <= yi + 10'd1;
+                            end
+                        end else begin
+                            xi <= xi + 10'd1;
+                        end
+                    end else begin
                         busy  <= 1'b0;
                         state <= S_IDLE;
                     end

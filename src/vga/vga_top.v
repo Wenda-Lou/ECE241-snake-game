@@ -35,7 +35,7 @@ module vga_top(
 
     game_tick #(
         .INPUT_CLK_FREQ(50_000_000),
-        .TICK_FREQ     (2)
+        .TICK_FREQ     (8)
     ) u_move_tick (
         .clk    (CLOCK_50),
         .resetn (resetn),
@@ -76,7 +76,7 @@ module vga_top(
     ) u_snake (
         .clk                (CLOCK_50),
         .rst_n              (resetn),
-        .step               (game_started ? sanke_step : 1'b0),
+        .step               (game_started ? snake_step : 1'b0),
         .dir                (dir),
         .fruit_x_cell       (fruit_x_cell),
         .fruit_y_cell       (fruit_y_cell),
@@ -96,11 +96,11 @@ module vga_top(
 	 assign score_inc = ate_fruit;
 	 
 	 
-	 // UNTESTED
 	 //------------------------------------------------------------
 	 // Fruit counter for speed upgrades
 	 //------------------------------------------------------------
 	 reg [7:0] fruit_count;
+	 reg [1:0] speed_level;
 		
 	 always @(posedge CLOCK_50 or negedge resetn) begin
 			 if (!resetn)
@@ -109,65 +109,53 @@ module vga_top(
 				  fruit_count <= fruit_count + 8'd1;
 	 end
 		
-	 //------------------------------------------------------------
-	 // Speed level (every 5 fruits)
-	 //------------------------------------------------------------
-	 reg [1:0] speed_level;
-		
-	 always @* begin
-			 if      (fruit_count <  8'd5) speed_level = 2'd0;   // 4 Hz
-			 else if (fruit_count < 10'd10) speed_level = 2'd1;  // 6 Hz
-			 else if (fruit_count < 15'd15) speed_level = 2'd2;  // 8 Hz
-			 else                           speed_level = 2'd3;  // 10 Hz
-	 end
-		
-	 //------------------------------------------------------------
-	 // Variable-speed snake_step generator
-	 // base_tick = 2 Hz (one tick every 0.5 seconds)
-	 //
-	 // For each base tick, produce:
-	 //
-	 //   level 0: 2 pulses  -> 4 Hz
-	 //   level 1: 3 pulses  -> 6 Hz
-	 //   level 2: 4 pulses  -> 8 Hz
-	 //   level 3: 5 pulses  -> 10 Hz
-	 //------------------------------------------------------------
-	 reg [2:0] pulse_target;
-	 reg [2:0] pulse_count;
-	 reg       snake_step_reg;
-		
-	 assign snake_step = snake_step_reg;
-		
-	 always @* begin
-			 case (speed_level)
-				  2'd0: pulse_target = 3'd2; // 2 pulses → 4 Hz
-				  2'd1: pulse_target = 3'd3; // 3 pulses → 6 Hz
-				  2'd2: pulse_target = 3'd4; // 4 pulses → 8 Hz
-				  default: pulse_target = 3'd5; // 5 pulses → 10 Hz
-			 endcase
-	 end
-		
-	 always @(posedge CLOCK_50 or negedge resetn) begin
-			 if (!resetn) begin
-				  pulse_count     <= 3'd0;
-				  snake_step_reg  <= 1'b0;
-			 end else begin
-				  snake_step_reg <= 1'b0;  // default
-		
-				  // Start new group of pulses when base_tick hits
-				  if (base_tick) begin
-						pulse_count <= 3'd0;
-				  end
-		
-				  // While we haven't delivered all pulses yet
-				  if (pulse_count < pulse_target) begin
-						snake_step_reg <= 1'b1;      // generate one step
-						pulse_count    <= pulse_count + 3'd1;
-				  end
-			 end
-	 end
-
-	 //UNTESTED END
+	// ------------------------------------------------------------
+	// Speed level from fruit_count
+	//   L0: 0.5 s   (8 Hz / 4)
+	//   L1: 0.25 s  (8 Hz / 2)
+	//   L2+: 0.125 s (8 Hz / 1)  [cap at fastest here]
+	// ------------------------------------------------------------
+	
+	always @* begin
+		 if      (fruit_count < 8'd5)   speed_level = 2'd0; // 0..4 fruits
+		 else if (fruit_count < 8'd10)  speed_level = 2'd1; // 5..9
+		 else                            speed_level = 2'd2; // 10+ (fastest)
+	end
+	
+	// Map level -> divide-by-N of 8 Hz base tick
+	reg [2:0] every_n;  // valid values: 4,2,1
+	always @* begin
+		 case (speed_level)
+			  2'd0: every_n = 3'd4; // 0.5 s
+			  2'd1: every_n = 3'd2; // 0.25 s
+			  default: every_n = 3'd1; // 0.125 s
+		 endcase
+	end
+	
+	// ------------------------------------------------------------
+	// ONE clean 1-clk snake_step pulse every 'every_n' base ticks
+	// ------------------------------------------------------------
+	reg [2:0] tick_ctr;
+	reg       snake_step_reg;
+	
+	assign snake_step = snake_step_reg;
+	
+	always @(posedge CLOCK_50 or negedge resetn) begin
+		 if (!resetn) begin
+			  tick_ctr       <= 3'd0;
+			  snake_step_reg <= 1'b0;
+		 end else begin
+			  snake_step_reg <= 1'b0;  // default low (one-clock pulse)
+			  if (base_tick) begin     // base_tick = 8 Hz (0.125 s)
+					if (tick_ctr == every_n - 1) begin
+						 tick_ctr       <= 3'd0;
+						 snake_step_reg <= 1'b1;   // emit exactly one pulse
+					end else begin
+						 tick_ctr <= tick_ctr + 3'd1;
+					end
+			  end
+		 end
+	end
 
 
     // -------------------------------------------
@@ -278,6 +266,7 @@ module vga_top(
 
         .start              (start_frame),
         .game_over          (game_over),
+		  .game_started         (game_started),
         .snake_dir          (dir),
 
         .snake_occ          (snake_grid),
