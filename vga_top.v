@@ -109,24 +109,49 @@ module vga_top(
 				  fruit_count <= fruit_count + 8'd1;
 	 end
 		
-	// --- SIMPLE, KNOWN-GOOD: 1 move every 0.5 s (8 Hz base ÷ 4) ---
-	reg [1:0] div4;
+	// ------------------------------------------------------------
+	// Speed level from fruit_count
+	//   L0: 0.5 s   (8 Hz / 4)
+	//   L1: 0.25 s  (8 Hz / 2)
+	//   L2+: 0.125 s (8 Hz / 1)  [cap at fastest here]
+	// ------------------------------------------------------------
+	
+	always @* begin
+		 if      (fruit_count < 8'd5)   speed_level = 2'd0; // 0..4 fruits
+		 else if (fruit_count < 8'd10)  speed_level = 2'd1; // 5..9
+		 else                            speed_level = 2'd2; // 10+ (fastest)
+	end
+	
+	// Map level -> divide-by-N of 8 Hz base tick
+	reg [2:0] every_n;  // valid values: 4,2,1
+	always @* begin
+		 case (speed_level)
+			  2'd0: every_n = 3'd4; // 0.5 s
+			  2'd1: every_n = 3'd2; // 0.25 s
+			  default: every_n = 3'd1; // 0.125 s
+		 endcase
+	end
+	
+	// ------------------------------------------------------------
+	// ONE clean 1-clk snake_step pulse every 'every_n' base ticks
+	// ------------------------------------------------------------
+	reg [2:0] tick_ctr;
 	reg       snake_step_reg;
 	
 	assign snake_step = snake_step_reg;
 	
 	always @(posedge CLOCK_50 or negedge resetn) begin
 		 if (!resetn) begin
-			  div4           <= 2'd0;
+			  tick_ctr       <= 3'd0;
 			  snake_step_reg <= 1'b0;
 		 end else begin
-			  snake_step_reg <= 1'b0;           // default low, 1-clk pulse
-			  if (base_tick) begin              // base_tick = 8 Hz (0.125 s)
-					if (div4 == 2'd3) begin       // every 4th base tick: 0.5 s
-						 div4           <= 2'd0;
-						 snake_step_reg <= 1'b1;   // emit ONE clock pulse
+			  snake_step_reg <= 1'b0;  // default low (one-clock pulse)
+			  if (base_tick) begin     // base_tick = 8 Hz (0.125 s)
+					if (tick_ctr == every_n - 1) begin
+						 tick_ctr       <= 3'd0;
+						 snake_step_reg <= 1'b1;   // emit exactly one pulse
 					end else begin
-						 div4 <= div4 + 2'd1;
+						 tick_ctr <= tick_ctr + 3'd1;
 					end
 			  end
 		 end
