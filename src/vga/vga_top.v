@@ -1,7 +1,5 @@
-// ===========================================================
 // Module: vga_top
 // Description: Snake engine + fruit + painter + VGA adapter
-// ===========================================================
 module vga_top(
     input  wire CLOCK_50,
     input  wire [1:0] KEY,  // KEY[0] = resetn
@@ -27,9 +25,7 @@ module vga_top(
     // Fruit position in cells (shared between snake_engine and fruit_placer)
     wire [5:0] fruit_x_cell, fruit_y_cell;
 
-    // -------------------------------------------
     // 1 Hz movement tick
-    // -------------------------------------------
     wire base_tick;
 	 wire snake_step;
 
@@ -42,9 +38,8 @@ module vga_top(
         .tick   (base_tick)
     );
 
-    // -------------------------------------------
+
     // 30 FPS frame tick
-    // -------------------------------------------
     wire frame_tick;
     frame_tick #(
         .INPUT_CLK_FREQ(50_000_000),
@@ -55,9 +50,8 @@ module vga_top(
         .tick(frame_tick)
     );
 
-    // -------------------------------------------
+
     // Snake Engine
-    // -------------------------------------------
     wire [5:0] snake_x_cell6, snake_y_cell6;
     wire [7:0] snake_len;
     wire       ate_fruit;
@@ -96,9 +90,8 @@ module vga_top(
 	 assign score_inc = ate_fruit;
 	 
 	 
-	 //------------------------------------------------------------
+
 	 // Fruit counter for speed upgrades
-	 //------------------------------------------------------------
 	 reg [7:0] fruit_count;
 	 reg [1:0] speed_level;
 		
@@ -109,12 +102,10 @@ module vga_top(
 				  fruit_count <= fruit_count + 8'd1;
 	 end
 		
-	// ------------------------------------------------------------
 	// Speed level from fruit_count
 	//   L0: 0.5 s   (8 Hz / 4)
 	//   L1: 0.25 s  (8 Hz / 2)
-	//   L2+: 0.125 s (8 Hz / 1)  [cap at fastest here]
-	// ------------------------------------------------------------
+	//   L2+: 0.125 s (8 Hz / 1)
 	
 	always @* begin
 		 if      (fruit_count < 8'd5)   speed_level = 2'd0; // 0..4 fruits
@@ -132,9 +123,7 @@ module vga_top(
 		 endcase
 	end
 	
-	// ------------------------------------------------------------
 	// ONE clean 1-clk snake_step pulse every 'every_n' base ticks
-	// ------------------------------------------------------------
 	reg [2:0] tick_ctr;
 	reg       snake_step_reg;
 	
@@ -158,9 +147,8 @@ module vga_top(
 	end
 
 
-    // -------------------------------------------
+
     // Fruit placer
-    // -------------------------------------------
     wire       fruit_done, fruit_busy;
 
     reg fruit_req;
@@ -194,9 +182,7 @@ module vga_top(
     wire [9:0] fruit_cx = {fruit_x_cell, 4'b0000} + 10'd8;
     wire [9:0] fruit_cy = {fruit_y_cell, 4'b0000} + 10'd8;
 
-    // -------------------------------------------
     // Snake occupancy bitmap (for full body draw)
-    // -------------------------------------------
     wire [H_CELLS*V_CELLS-1:0] snake_grid;
 
     snake_occupancy #(
@@ -214,9 +200,7 @@ module vga_top(
         .grid             (snake_grid)
     );
 
-    // -------------------------------------------
     // Grid map for snake head (still available if needed)
-    // -------------------------------------------
     wire [9:0] x_min_px, x_max_px;
     wire [9:0] y_min_px, y_max_px;
 
@@ -229,9 +213,8 @@ module vga_top(
         .y_max_px (y_max_px)
     );
 
-    // -------------------------------------------
+
     // Painter refresh controller
-    // -------------------------------------------
     wire painter_busy;
     reg  start_frame;
 
@@ -244,9 +227,7 @@ module vga_top(
             start_frame <= 1'b0;
     end
 
-    // -------------------------------------------
     // Painter
-    // -------------------------------------------
     wire [9:0] x;
     wire [9:0] y;
     wire [2:0] color_3b;
@@ -283,9 +264,7 @@ module vga_top(
     // 3-bit to 9-bit colour
     wire [8:0] color_9b = { {3{color_3b[2]}}, {3{color_3b[1]}}, {3{color_3b[0]}} };
 
-    // -------------------------------------------
     // VGA adapter
-    // -------------------------------------------
     vga_adapter VGA (
         .resetn      (resetn),
         .clock       (CLOCK_50),
@@ -308,3 +287,4 @@ module vga_top(
     defparam VGA.BACKGROUND_IMAGE  = "";
 
 endmodule
+
