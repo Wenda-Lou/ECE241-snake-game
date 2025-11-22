@@ -1,9 +1,7 @@
-// ===========================================================
 // Module: game
 // Description:
 //   top-level: PS/2 keyboard -> dir, then into vga_top
 //   which handles snake_engine + fruit + VGA drawing.
-// ===========================================================
 module game (
     input  wire        CLOCK_50,   // 50 MHz system clock
     input  wire [3:0]  KEY,        // KEY[0] used as active-low reset
@@ -33,9 +31,8 @@ module game (
     // Raw byte stream from keyboard
     wire [7:0] ps2_rx_data;
     wire       ps2_rx_ready;
-	 wire frame_err;
+	wire frame_err;
 
-    // make sure this matches your ps2_rx.v port list.
     ps2_rx u_ps2_rx (
         .clk      (CLOCK_50),
         .rst_n  (resetn),
@@ -48,9 +45,6 @@ module game (
 
     // PS/2 Scancode Decoder
     wire up, dn, lt, rt, enter;
-	 
-
-    // Again, adapt port names if your ps2_scancode is slightly different.
     ps2_scancode u_ps2_sc (
         .clk      (CLOCK_50),
         .rst_n  (resetn),
@@ -73,7 +67,6 @@ module game (
 	 end
 
     // Scancode -> Snake Direction (2 bits)
-    // dir encoding (as we’ve been using):
     //   2'b01 : left   (X--)
     //   2'b00 : right  (X++)
     //   2'b10 : up     (Y--)
@@ -89,12 +82,9 @@ module game (
 		  .right_pulse (rt),
         .dir     (dir)
     );
-	 
-
 	
 	 wire score_inc;
-	 
-	 
+	  
     // VGA + Snake Game Core
     // vga_top does:
     //   - game_tick (1 Hz) inside
@@ -129,3 +119,4 @@ module game (
     );
 
 endmodule
+
