@@ -43,8 +43,8 @@ module ps2_scancode(
                     end
                     default: begin
 								
-								// Key deteection when we are in the e0 mode
-								if (e0_seen && !f0_seen) begin
+							// Key deteection when we are in the e0 mode
+							if (e0_seen && !f0_seen) begin
                             // MAKE event for extended key
                             if (data_in == SC_UP)    up_make    <= 1'b1;
                             if (data_in == SC_DOWN)  down_make  <= 1'b1;
@@ -54,8 +54,6 @@ module ps2_scancode(
 								
 								
 						// ENTER MAKE (non-extended, simple case)
-                        // We only care about the MAKE (key press),
-                        // so any SC_ENTER byte is treated as a press.
 								if (!e0_seen && !f0_seen && data_in == SC_ENTER)
                             enter_make <= 1'b1;
 									 
