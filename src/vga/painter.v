@@ -1,4 +1,3 @@
-// ===========================================================
 // Module: painter
 // Description:
 //   Frame-based painter:
@@ -6,7 +5,6 @@
 //   - Draws red circular fruit
 //   - Draws full snake body from occupancy bitmap
 //   - Draws solid red Game Over screen when game_over = 1
-// ===========================================================
 module painter #(
     parameter integer H_RES    = 640,
     parameter integer V_RES    = 480,
@@ -64,7 +62,7 @@ module painter #(
     localparam [2:0] COL_RED   = 3'b100;
     localparam [2:0] COL_BODY  = 3'b011;  // body segments (slightly different from head)
 
-    // ---------- "GAME OVER" text layout ----------
+    // "GAME OVER" text layout
     localparam integer FONT_W      = 8;
     localparam integer FONT_H      = 8;
     localparam integer FONT_SCALE  = 2;      // each font pixel => 2x2 screen pixels
@@ -76,7 +74,7 @@ module painter #(
     localparam integer TEXT_X0     = (H_RES - TEXT_PIX_W) / 2;
     localparam integer TEXT_Y0     = (V_RES - TEXT_PIX_H) / 2;
 
-    // ---------- "PRESS ENTER TO START" text layout ----------
+    //"PRESS ENTER TO START" text layout
     localparam integer START_TEXT_LEN    = 20;
     localparam integer START_TEXT_PIX_W  = FONT_W * START_TEXT_LEN * FONT_SCALE;
     localparam integer START_TEXT_PIX_H  = FONT_H * FONT_SCALE;
@@ -146,13 +144,11 @@ module painter #(
     localparam [3:0] CHAR_T = 4'd11;
     localparam [3:0] CHAR_N = 4'd12;
 
-    // ==========================================================
     // Font function: 8x8 bitmap for drawing text
     // Existing mapping maintained for "GAME OVER" and extended
     // for start-screen text.
     // row: 0..7 (top to bottom)
     // return[7] = leftmost pixel, return[0] = rightmost pixel
-    // ==========================================================
     function [7:0] glyph_row;
         input [3:0] char_idx;
         input [2:0] row;
@@ -418,9 +414,7 @@ module painter #(
             plot <= 1'b0;
 
             case (state)
-                // -------------------------------------------------
                 // Draw background + border
-                // -------------------------------------------------
                 S_INIT_BG: begin
                     busy <= 1'b1;
 
@@ -456,9 +450,7 @@ module painter #(
                     end
                 end
 
-                // -------------------------------------------------
                 // Draw red circular fruit
-                // -------------------------------------------------
                 S_FRUIT: begin
                     busy <= 1'b1;
 
@@ -488,9 +480,7 @@ module painter #(
                     end
                 end
 
-                // -------------------------------------------------
                 // Iterate all cells; if occupied, go draw its 16x16 block
-                // -------------------------------------------------
                 S_BODY_CELL: begin
                     busy <= 1'b1;
 
@@ -522,9 +512,7 @@ module painter #(
                     end
                 end
 
-                // -------------------------------------------------
                 // Draw all pixels of one occupied cell as a solid block
-                // -------------------------------------------------
                 S_BODY_PIX: begin
                     busy   <= 1'b1;
 
@@ -568,9 +556,8 @@ module painter #(
                     end
                 end
 
-                // -------------------------------------------------
                 // Idle: wait for start or game_over
-                // -------------------------------------------------
+
                 S_IDLE: begin
                     busy <= 1'b0;
                     if (!game_started) begin
@@ -592,10 +579,8 @@ module painter #(
                     end
                 end
 
-                // -------------------------------------------------
                 // Game over screen: red background + white border +
                 // centered "GAME OVER" text in white
-                // -------------------------------------------------
                 S_GAME_OVER: begin
                     busy <= 1'b1;
 
@@ -657,9 +642,7 @@ module painter #(
                     end
                 end
 
-                // -------------------------------------------------
                 // Splash screen before the game starts
-                // -------------------------------------------------
                 S_START_SCREEN: begin
                     busy <= 1'b1;
 
