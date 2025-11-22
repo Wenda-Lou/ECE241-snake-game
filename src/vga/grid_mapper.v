@@ -1,10 +1,8 @@
-// ===========================================================
 // Module: grid_mapper
 // Description:
 //   Map the snake-head grid coordinates (x_cell, y_cell)
 //   to the VGA pixel range (x_min_px, x_max_px, y_min_px, y_max_px)
 //   where each cell spans 16x16 pixels.
-// ===========================================================
 
 module grid_mapper (
     input  wire [5:0] x_cell,   // Grid coordinate X (0-39)
@@ -15,16 +13,12 @@ module grid_mapper (
     output wire [9:0] y_max_px  // Corresponding pixel bottom boundary
 );
 
-    // =======================================================
     // Local parameter definitions (instead of a .vh include)
-    // =======================================================
     localparam CELL_PX   = 16;   // Each cell covers 16x16 pixels
     localparam X0_OFFSET = 0;    // Screen left-edge offset
     localparam Y0_OFFSET = 0;    // Screen top-edge offset
 
-    // =======================================================
     // Coordinate mapping logic
-    // =======================================================
     assign x_min_px = X0_OFFSET + x_cell * CELL_PX;
     assign x_max_px = x_min_px + CELL_PX - 1;
 
