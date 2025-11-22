@@ -53,7 +53,7 @@ module ps2_scancode(
                         end
 								
 								
-								// ENTER MAKE (non-extended, simple case)
+						// ENTER MAKE (non-extended, simple case)
                         // We only care about the MAKE (key press),
                         // so any SC_ENTER byte is treated as a press.
 								if (!e0_seen && !f0_seen && data_in == SC_ENTER)
