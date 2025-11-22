@@ -102,11 +102,7 @@ module snake_engine #(
         (next_head_y == fruit_y_cell);
 
     // Self-collision check
-    //
     // Tail exception:
-    //   If we are NOT growing this move, the head is allowed
-    //   to move into the current tail position, because that
-    //   tail cell will be vacated in the same step.
     reg self_hit;
 
     always @* begin
@@ -175,9 +171,7 @@ module snake_engine #(
                 if (will_hit_wall || self_hit) begin
                     game_over <= 1'b1;
                 end else begin
-                    // =======================================
                     // No collision: perform the move
-                    // =======================================
 
                     // Inform helpers what the new head cell will be
                     new_head_x_cell <= next_head_x;
@@ -185,9 +179,7 @@ module snake_engine #(
                     new_head_valid  <= 1'b1;
 
                     if (hit_fruit_next && (snake_len < MAX_LEN)) begin
-                        // -----------------------------------
                         // GROWTH MOVE (fruit eaten)
-                        // -----------------------------------
                         // Shift body:
                         // old [0] -> [1], ..., old [snake_len-1] -> [snake_len]
                         for (i = MAX_LEN-1; i > 0; i = i - 1) begin
