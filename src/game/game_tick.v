@@ -1,16 +1,16 @@
 module game_tick #(
-    parameter INPUT_CLK_FREQ = 50_000_000,  // 输入时钟频率 (Hz)
-    parameter TICK_FREQ      = 2            // 输出 tick 频率 (Hz)
+    parameter INPUT_CLK_FREQ = 50_000_000,  // Input clock frequency (Hz)
+    parameter TICK_FREQ      = 2            // Output tick frequency (Hz)
 )(
-    input  wire clk,        // 系统时钟 (CLOCK_50)
-    input  wire resetn,     // 低电平复位
-    output reg  tick        // 每次高电平持续 1 个 clk 周期
+    input  wire clk,        // System clock (CLOCK_50)
+    input  wire resetn,     // Active-low reset
+    output reg  tick        // Each pulse stays high for one clk cycle
 );
 
-    // 每个 tick 周期需要计数的时钟周期数
+    // Number of clock cycles per tick period
     localparam integer PERIOD_COUNT = INPUT_CLK_FREQ / TICK_FREQ;
 
-    // 计数器位宽 = ceil(log2(PERIOD_COUNT))
+    // Counter width = ceil(log2(PERIOD_COUNT))
     reg [$clog2(PERIOD_COUNT)-1:0] counter;
 
     always @(posedge clk or negedge resetn) begin
@@ -18,12 +18,12 @@ module game_tick #(
             counter <= 0;
             tick    <= 1'b0;
         end else begin
-            // 默认 tick 为低
+            // Default state keeps tick low
             tick <= 1'b0;
 
             if (counter == PERIOD_COUNT - 1) begin
                 counter <= 0;
-                tick    <= 1'b1; // 产生一个时钟周期的脉冲
+                tick    <= 1'b1; // Generate a one-clock pulse
             end else begin
                 counter <= counter + 1;
             end

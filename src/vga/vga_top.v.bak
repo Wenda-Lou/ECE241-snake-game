@@ -1,7 +1,7 @@
 // ===========================================================
 // Module: vga_top
 // Description:
-//   顶层：蛇头、网格映射、随机水果、绘制、VGA 适配器（同一 50MHz 时钟域）。
+//   Top level: snake head, grid mapper, random fruit placer, painter, and VGA adapter (all in the same 50 MHz clock domain).
 // ===========================================================
 module vga_top(
     input  wire CLOCK_50,
@@ -16,7 +16,7 @@ module vga_top(
     output wire       VGA_SYNC_N,
     output wire       VGA_CLK
 );
-    // 基本参数
+    // Basic parameters
     localparam H_RES     = 640;
     localparam V_RES     = 480;
     localparam CELL_PX   = 16;
@@ -27,13 +27,13 @@ module vga_top(
 
     wire resetn = KEY[0];
 
-    // （仿真/检查用）当未来把网格放大到 >=64 时，请同时扩展 fruit_placer 端口位宽
+    // (Simulation/check reminder) If the grid ever grows to >=64 cells, also widen the fruit_placer port widths.
     // initial begin
     //   if (GRID_W > 64 || GRID_H > 64) $error("Grid exceeds 6-bit range; widen fruit_placer ports.");
     // end
 
-    // 蛇头 cell 坐标（snake_head 如为 [9:0] 输出，这里安全截断到 [5:0]。
-    // 说明：当前 GRID_W=40, GRID_H=30，数值范围均 < 64，截断不会丢失有效位。）
+    // Snake-head cell coordinates (if snake_head outputs [9:0], it is still safe to truncate to [5:0]).
+    // Explanation: with GRID_W=40 and GRID_H=30, all values are <64 so no significant bits are lost.
     // wire [9:0] x_cell, y_cell;
 
 	 
@@ -82,11 +82,11 @@ module vga_top(
 	 wire [9:0] x_cell = {4'b0000, snake_x_cell6};
 	 wire [9:0] y_cell = {4'b0000, snake_y_cell6};
 
-    // 随机水果（cell 坐标）
+    // Random fruit coordinates (cell space)
     wire [5:0] fruit_x_cell, fruit_y_cell;
     wire       fruit_done, fruit_busy;
 
-    // 复位后请求一次生成（保持 1 直到 done）
+    // After reset, request one generation (hold high until done)
     reg fruit_req;
     always @(posedge CLOCK_50 or negedge resetn) begin
         if (!resetn)      fruit_req <= 1'b1;
@@ -108,11 +108,11 @@ module vga_top(
         .busy         (fruit_busy)
     );
 
-    // cell → 像素中心（*16 + 8）
+    // cell -> pixel center (*16 + 8)
     wire [9:0] fruit_cx = {fruit_x_cell, 4'b0000} + 10'd8;
     wire [9:0] fruit_cy = {fruit_y_cell, 4'b0000} + 10'd8;
 
-    // 网格映射：蛇头 cell → 像素区间
+    // Grid mapper: snake-head cell -> pixel range
     wire [9:0] x_min_px, x_max_px;
     wire [9:0] y_min_px, y_max_px;
     grid_mapper u_mapper (
@@ -124,14 +124,14 @@ module vga_top(
         .y_max_px (y_max_px)
     );
 
-    // 绘制模块
+    // Painter module
     wire [9:0] x;
     wire [9:0] y;
     wire [2:0] color_3b;
     wire       write_stb;
     wire       busy;
 
-    // 3-bit → 9-bit (RRR GGG BBB)
+    // 3-bit -> 9-bit (RRR GGG BBB)
     wire [8:0] color_9b = { {3{color_3b[2]}}, {3{color_3b[1]}}, {3{color_3b[0]}} };
 
     painter u_painter (
@@ -150,7 +150,7 @@ module vga_top(
         .busy      (busy)
     );
 
-    // VGA 适配器（如你的 IP 端口名为 .colour/.plot，请相应改回）
+    // VGA adapter (rename the ports if your IP uses .colour/.plot)
     vga_adapter VGA (
         .resetn      (resetn),
         .clock       (CLOCK_50),

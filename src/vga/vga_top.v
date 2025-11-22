@@ -27,7 +27,7 @@ module vga_top(
 
     // 1 Hz movement tick
     wire base_tick;
-	 wire snake_step;
+	wire snake_step;
 
     game_tick #(
         .INPUT_CLK_FREQ(50_000_000),
@@ -220,8 +220,8 @@ module vga_top(
 
     always @(posedge CLOCK_50 or negedge resetn) begin
         if (!resetn)
-            start_frame <= 1'b1;                 // 上电时画第一帧
-        else if (!painter_busy && frame_tick)    // 只有“空闲 + 到帧时间”才拉高
+            start_frame <= 1'b1;                 // Draw the very first frame right after power-up
+        else if (!painter_busy && frame_tick)    // Assert only when the painter is idle and the frame tick arrives
             start_frame <= 1'b1;
         else
             start_frame <= 1'b0;
