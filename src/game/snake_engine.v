@@ -1,13 +1,10 @@
-// ===========================================================
 // Module: snake_engine
 // Description:
 //   Snake game core in CELL coordinates (not pixels).
-//   - Moves 1 cell whenever `step` pulses
 //   - Grows when head reaches fruit cell
 //   - Detects wall + self collision
 //   - Freezes when game_over = 1
-//   - (Optional) Exposes head/tail updates for VGA occupancy
-// ===========================================================
+
 module snake_engine #(
     parameter integer H_CELLS = 40,   // grid width  (cells)
     parameter integer V_CELLS = 30,   // grid height (cells)
@@ -31,10 +28,7 @@ module snake_engine #(
     output reg        ate_fruit,      // 1-cycle pulse when fruit eaten
     output reg  [7:0] snake_len,      // current length (segments)
 
-    // -------------------------------------------------------
-    // Optional helper outputs for rendering / occupancy map.
-    // You can ignore these ports if you don't need them.
-    // -------------------------------------------------------
+    // helper outputs for rendering / occupancy map.
     output reg  [5:0] new_head_x_cell,  // head position AFTER this move
     output reg  [5:0] new_head_y_cell,
     output reg        new_head_valid,   // 1-cycle pulse when a move occurs
@@ -61,9 +55,7 @@ module snake_engine #(
     reg [5:0] next_head_y;
     reg       will_hit_wall;
 
-    // -------------------------------------------------------
     // Direction → next head position + wall check
-    // -------------------------------------------------------
     always @* begin
         next_head_x   = snake_head_x_cell;
         next_head_y   = snake_head_y_cell;
@@ -109,14 +101,12 @@ module snake_engine #(
         (next_head_x == fruit_x_cell) &&
         (next_head_y == fruit_y_cell);
 
-    // -------------------------------------------------------
-    // Self-collision check (combinational)
+    // Self-collision check
     //
     // Tail exception:
     //   If we are NOT growing this move, the head is allowed
     //   to move into the current tail position, because that
     //   tail cell will be vacated in the same step.
-    // -------------------------------------------------------
     reg self_hit;
 
     always @* begin
@@ -134,14 +124,10 @@ module snake_engine #(
         end
     end
 
-    // -------------------------------------------------------
     // Sequential logic: movement, growth, game_over
-    // -------------------------------------------------------
     always @(posedge clk or negedge rst_n) begin
         if (!rst_n) begin
-            // -----------------------------------------------
             // Reset snake: centered, length 3, horizontal to left
-            // -----------------------------------------------
             snake_head_x_cell <= H_CELLS/2;
             snake_head_y_cell <= V_CELLS/2;
             game_over         <= 1'b0;
@@ -225,12 +211,8 @@ module snake_engine #(
                         // so old_tail_valid stays 0 in this branch.
 
                     end else begin
-                        // -----------------------------------
-                        // NORMAL MOVE (no growth)
-                        // -----------------------------------
+                        // NORMAL MOVE
                         // Capture old tail position BEFORE it is overwritten.
-                        // Due to non-blocking assignments (<=), this still
-                        // sees the "old" tail coordinates.
                         old_tail_x_cell <= snake_x[snake_len-1];
                         old_tail_y_cell <= snake_y[snake_len-1];
                         old_tail_valid  <= 1'b1;
