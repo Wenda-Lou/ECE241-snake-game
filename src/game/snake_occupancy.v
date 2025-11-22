@@ -1,11 +1,10 @@
-// ===========================================================
 // Module: snake_occupancy
 // Description:
 //   Maintains a bitmap of which grid cells are occupied by the snake.
 //   - grid[y * H_CELLS + x] = 1 means snake occupies cell (x, y)
 //   - Updated incrementally using new head and old tail information.
 //   - On reset, initializes to the same 3-segment snake as snake_engine.
-// ===========================================================
+
 module snake_occupancy #(
     parameter integer H_CELLS = 40,
     parameter integer V_CELLS = 30
